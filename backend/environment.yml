@@ -1,0 +1,35 @@
+name: clean-skies
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - xarray
+  - rioxarray
+  - rasterio
+  - geopandas
+  - shapely
+  - pyproj
+  - netcdf4
+  - h5netcdf
+  - zarr
+  - dask
+  - s3fs
+  - fsspec
+  - numpy
+  - pandas
+  - scikit-learn
+  - requests
+  - fastapi
+  - uvicorn
+  - streamlit
+  - folium
+  - pydeck
+  - duckdb
+  - pyarrow
+  - jupyterlab
+  - ipykernel
+  - earthaccess
+  - harmony-py
+  - pip
+  - pip:
+      - streamlit-folium

@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+
+# data & artifacts
+data/
+artifacts/
+checkpoints/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Credentials
+.netrc
+.env
