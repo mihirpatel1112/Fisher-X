@@ -1,0 +1,60 @@
+# -----------------
+# GENERAL/FRONTEND
+# -----------------
+
+# Dependencies
+node_modules
+**/.pnp
+**/.pnp.*
+**/.yarn
+!**/.yarn/patches
+!**/.yarn/plugins
+!**/.yarn/releases
+!**/.yarn/versions
+
+# Testing
+coverage
+
+# Next.js / Build Output
+.next/
+out/
+build/
+
+# Vercel
+.vercel
+
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# -----------------
+# BACKEND (General)
+# -----------------
+
+# Python Virtual Environments
+venv/
+.venv/
+venv*
+.venv*
+
+# -----------------
+# MISC (Global)
+# -----------------
+
+# OS/System Files
+.DS_Store
+**/.DS_Store
+Thumbs.db
+
+# Security/Debug Files
+*.pem
+**/*.pem
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ENVIRONMENT FILES
+.env*
+**/.env*
