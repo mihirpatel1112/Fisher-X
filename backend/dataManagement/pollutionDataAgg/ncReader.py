@@ -16,7 +16,7 @@ def read_tempo_file(filepath):
     print(f"\n Opening file: {os.path.basename(filepath)}")
     
     try:
-        # TEMPO files have multiple groups - we want the 'product' group
+        # get product group 
         ds = xr.open_dataset(filepath, group='product')
         print(" File opened successfully!")
         return ds
@@ -67,7 +67,6 @@ def extract_to_json(ds, output_file="tempo_data.json", sample_size=100):
         ds: xarray Dataset
         output_file: Output JSON filename
         sample_size: Number of sample points to extract
-    Returns:Dictionary with extracted data
     """
     if ds is None:
         return None
@@ -95,7 +94,7 @@ def extract_to_json(ds, output_file="tempo_data.json", sample_size=100):
         print("No lat/lon coordinates found")
         lats = lons = None
     
-    # Sample the data (to avoid huge JSON files)
+    # CHECK TO PREVENT LARGE JSON FILES CAN remove if oyu want 
     if data.size > sample_size:
         # Flatten and sample
         flat_data = data.flatten()
@@ -134,9 +133,6 @@ def extract_to_json(ds, output_file="tempo_data.json", sample_size=100):
     return output
 
 def main():
-    """
-    Main function to demonstrate reading TEMPO files
-    """
     print("\n" + "="*70)
     print("TEMPO NetCDF FILE READER")
     print("="*70)
@@ -160,13 +156,13 @@ def main():
     ds = read_tempo_file(filepath)
     
     if ds:
+
         # Explore the file
         explore_tempo_file(ds)
         
         # Extract to JSON
         extract_to_json(ds, output_file="tempo_data.json")
        
-        # Close dataset
         ds.close()
         
         print("\n" + "="*70)

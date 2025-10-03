@@ -12,7 +12,6 @@ EARTHDATA_TOKEN = os.getenv('TOKEN')
 
 class TEMPODataFetcher:
     def __init__(self, token):
-
         # Initialize with Earthdata token
         """
         Args:
@@ -35,9 +34,6 @@ class TEMPODataFetcher:
             start_date: Start date string (YYYY-MM-DD)
             end_date: End date string (YYYY-MM-DD)
             product_type: Type of TEMPO product (NO2_L3, HCHO_L3, O3TOT_L3, NO2_L2) 
-        
-        Returns:
-            List of data 
         """
 
         # TEMPO product short names with version
@@ -84,12 +80,8 @@ class TEMPODataFetcher:
     def get_download_urls(self, granules):
         """
         Extract download URLs from granule metadata
-        
         Args:
             granules: List of granule metadata from search_tempo_data()
-        
-        Returns:
-            List of dictionaries with file info and URLs
         """
         urls = []
         
@@ -117,13 +109,9 @@ class TEMPODataFetcher:
     def download_file(self, url, output_dir="./tempo_data"):
         """
         Download a single TEMPO data file using token authentication
-        
         Args:
             url: Direct download URL
             output_dir: Directory to save the file
-        
-        Returns:
-            Path to downloaded file or None if failed
         """
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -139,14 +127,14 @@ class TEMPODataFetcher:
         print(f"Downloading {filename}...")
         
         try:
-            # Create session with authentication
+            # Create session + authentication
             session = requests.Session()
             session.headers.update(self.headers)
             
             response = session.get(url, stream=True, timeout=300)
             response.raise_for_status()
             
-            # Download with progress
+            # Download w progress
             total_size = int(response.headers.get('content-length', 0))
             downloaded = 0
             
@@ -154,12 +142,7 @@ class TEMPODataFetcher:
                 for chunk in response.iter_content(chunk_size=8192):
                     if chunk:
                         f.write(chunk)
-                        downloaded += len(chunk)
-                        
-                        # Simple progress indicator
-                        if total_size > 0:
-                            progress = (downloaded / total_size) * 100
-                            print(f"  Progress: {progress:.1f}%", end='\r')
+                        downloaded += len(chunk)             
             
             print(f"\n✓ Downloaded: {filename}")
             return filepath
@@ -175,9 +158,6 @@ class TEMPODataFetcher:
         Args:
             file_info_list: List from get_download_urls()
             output_dir: Directory to save files
-        
-        Returns:
-            List of downloaded file paths
         """
         downloaded_files = []
         
@@ -193,9 +173,6 @@ class TEMPODataFetcher:
         return downloaded_files 
 
 def main():
-    """
-    Main function to demonstrate data fetching
-    """
     print("=" * 70)
     print("Air Quality Data Fetcher - TEMPO & AirNow (Token-Based)")
     print("=" * 70)
@@ -229,7 +206,6 @@ def main():
                     print(f"   Size: {info['size_mb']} MB")
                     print(f"   URLs: {len(info['urls'])} file(s)")
                 
-                # Uncomment to actually download files
                 print("\n--- Downloading Files ---")
                 downloaded = tempo.download_multiple(file_info[:2])  # Download first 2
                 print(f"\nTotal files downloaded: {len(downloaded)}")
@@ -240,8 +216,6 @@ def main():
             print(f"Error fetching TEMPO data: {e}")
     else:
         print("EARTHDATA_TOKEN not found in .env file")
-        print("Please generate a token at: https://urs.earthdata.nasa.gov")
-
 if __name__ == "__main__":
     main()
 
