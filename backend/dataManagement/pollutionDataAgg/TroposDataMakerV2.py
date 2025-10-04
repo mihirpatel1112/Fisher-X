@@ -47,8 +47,6 @@ INCLUDE_QUALITY_FLAGS = True  # Include quality flag data
 INCLUDE_ANGLES = True  # Include viewing/solar angles
 
 # ============================================================================
-
-
 def authenticate():
     auth = earthaccess.login()
     if not auth.authenticated:
