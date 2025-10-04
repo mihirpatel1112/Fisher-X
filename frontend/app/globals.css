@@ -1,6 +1,16 @@
 @import "tailwindcss";
 
 :root {
+  /* NASA Color Palette */
+  --nasa-blue: #0B3D91;
+  --nasa-deep-blue: #002157;
+  --nasa-light-blue: #7AB6E8;
+  --nasa-red: #FC3D21;
+  --nasa-dark: #1E1E1E;
+  --nasa-space-black: #0A0E27;
+  --nasa-gray: #6B7280;
+  --nasa-light-gray: #F3F4F6;
+  
   --background: #ffffff;
   --foreground: #171717;
 }
@@ -10,6 +20,14 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  
+  /* NASA Theme Colors */
+  --color-nasa-blue: var(--nasa-blue);
+  --color-nasa-deep-blue: var(--nasa-deep-blue);
+  --color-nasa-light-blue: var(--nasa-light-blue);
+  --color-nasa-red: var(--nasa-red);
+  --color-nasa-dark: var(--nasa-dark);
+  --color-nasa-space-black: var(--nasa-space-black);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -23,4 +41,20 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* NASA-themed gradient backgrounds */
+.nasa-gradient-blue {
+  background: linear-gradient(135deg, var(--nasa-deep-blue) 0%, var(--nasa-blue) 100%);
+}
+
+.nasa-gradient-space {
+  background: linear-gradient(135deg, var(--nasa-space-black) 0%, var(--nasa-deep-blue) 100%);
+}
+
+.nasa-text-gradient {
+  background: linear-gradient(135deg, var(--nasa-light-blue) 0%, var(--nasa-blue) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
