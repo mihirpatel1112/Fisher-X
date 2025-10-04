@@ -13,3 +13,4 @@ checkpoints/
 # Credentials
 .netrc
 .env
+.vercel
