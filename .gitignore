@@ -56,5 +56,6 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # ENVIRONMENT FILES
-.env*
-**/.env*
+.env
+**/.env
+.netrc
