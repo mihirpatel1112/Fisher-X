@@ -74,7 +74,7 @@ export default function Example() {
                 About the Challenge
               </h2>
               <p className="mt-6 text-lg leading-8 text-gray-600">
-                NASA's Tropospheric Emissions: Monitoring of Pollution (TEMPO) mission is revolutionizing air quality monitoring across North America. This challenge invites you to harness this cutting-edge technology for public health impact.
+                NASA&apos;s Tropospheric Emissions: Monitoring of Pollution (TEMPO) mission is revolutionizing air quality monitoring across North America. This challenge invites you to harness this cutting-edge technology for public health impact.
               </p>
             </div>
 
@@ -227,7 +227,7 @@ export default function Example() {
                 The 2025 NASA Space Apps Challenge will take place as scheduled on <span className="font-bold">October 4–5, 2025</span>
               </p>
               <p className="mt-4 text-sm text-gray-300">
-                NASA Space Apps is funded by NASA's Earth Science Division through a contract with Booz Allen Hamilton, Mindgrub, and SecondMuse.
+                NASA Space Apps is funded by NASA&apos;s Earth Science Division through a contract with Booz Allen Hamilton, Mindgrub, and SecondMuse.
               </p>
             </div>
           </div>
