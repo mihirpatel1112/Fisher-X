@@ -255,11 +255,6 @@ export default function home() {
               &copy; 2025 Fisher-X | NASA Space Apps Challenge
             </p>
           </div>
-          <div className="mt-8 text-center">
-            <p className="text-xs text-gray-500">
-              Copyright ©2025 NASA | Privacy Policy | Legal | Contact
-            </p>
-          </div>
         </div>
       </footer>
     </div>
