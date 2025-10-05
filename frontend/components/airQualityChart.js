@@ -3,20 +3,20 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 
 const AQI_THRESHOLDS = {
   pm25: [
-    { level: 'Good', max: 12, color: '#00e400' },
-    { level: 'Moderate', max: 35.4, color: '#ffff00' },
-    { level: 'Unhealthy for Sensitive', max: 55.4, color: '#ff7e00' },
-    { level: 'Unhealthy', max: 150.4, color: '#ff0000' },
-    { level: 'Very Unhealthy', max: 250.4, color: '#8f3f97' },
-    { level: 'Hazardous', max: Infinity, color: '#7e0023' }
+    { level: 'Good', max: 12, color: '#009E73' },
+    { level: 'Moderate', max: 35.4, color: '#D5BF00' },
+    { level: 'Unhealthy for Sensitive', max: 55.4, color: '#E67E22' },
+    { level: 'Unhealthy', max: 150.4, color: '#D13C4F' },
+    { level: 'Very Unhealthy', max: 250.4, color: '#7E3F8F' },
+    { level: 'Hazardous', max: Infinity, color: '#5E1A1A' }
   ],
   no2: [
-    { level: 'Good', max: 53, color: '#00e400' },
-    { level: 'Moderate', max: 100, color: '#ffff00' },
-    { level: 'Unhealthy for Sensitive', max: 360, color: '#ff7e00' },
-    { level: 'Unhealthy', max: 649, color: '#ff0000' },
-    { level: 'Very Unhealthy', max: 1249, color: '#8f3f97' },
-    { level: 'Hazardous', max: Infinity, color: '#7e0023' }
+    { level: 'Good', max: 53, color: '#009E73' },
+    { level: 'Moderate', max: 100, color: '#D5BF00' },
+    { level: 'Unhealthy for Sensitive', max: 360, color: '#E67E22' },
+    { level: 'Unhealthy', max: 649, color: '#D13C4F' },
+    { level: 'Very Unhealthy', max: 1249, color: '#7E3F8F' },
+    { level: 'Hazardous', max: Infinity, color: '#5E1A1A' }
   ]
 };
 
@@ -82,13 +82,13 @@ export default function AirQualityChart({ data, pollutant = 'pm25', title = 'Air
           {/* Threshold reference lines */}
           <ReferenceLine 
             y={thresholds[1].max} 
-            stroke="#ffff00" 
+            stroke="#D5BF00" 
             strokeDasharray="3 3" 
             label={{ value: 'Moderate', position: 'right', fontSize: 10 }} 
           />
           <ReferenceLine 
             y={thresholds[2].max} 
-            stroke="#ff7e00" 
+            stroke="#D13C4F" 
             strokeDasharray="3 3" 
             label={{ value: 'Unhealthy', position: 'right', fontSize: 10 }} 
           />
