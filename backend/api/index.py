@@ -13,7 +13,6 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from weatherDataAgg import NLDASWeatherManager
 from .MeteoStat_Analysis import MeteostatAPI
 from pydantic import BaseModel, Field
-from typing import Optional
 
 load_dotenv()
 
@@ -22,6 +21,17 @@ app = FastAPI(title="SpaceApps AQ Backend")
 # Initialize the client
 openaq_client = None
 weather_manager = None
+
+# Lazy init for serverless (startup event may not run)
+def get_openaq_client() -> OpenAQ:
+    global openaq_client
+    if openaq_client is None:
+        api_key = os.getenv("OPENAQ_API_KEY")
+        try:
+            openaq_client = OpenAQ(api_key=api_key)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to initialize OpenAQ client: {str(e)}")
+    return openaq_client
 
 
 @app.on_event("startup")
@@ -106,9 +116,10 @@ async def get_combined_data(
         radius_increment = 10000  # Increase by 10km each time
         current_radius = radius
         nearby_locations = None
+        client = get_openaq_client()
 
         while current_radius <= max_radius:
-            nearby_locations = openaq_client.locations.list(
+            nearby_locations = client.locations.list(
                 coordinates=f"{lat},{lng}",
                 radius=current_radius,
                 limit=1
@@ -144,7 +155,7 @@ async def get_combined_data(
                     }
 
             # Fetch latest measurements
-            latest = openaq_client.locations.latest(locations_id=location_id)
+            latest = client.locations.latest(locations_id=location_id)
 
             latest_measurements = {}
             if latest and hasattr(latest, 'results'):
@@ -261,9 +272,10 @@ def query_location_endpoint(
     radius_increment = 10000  # Increase by 10km each time
     current_radius = radius
     nearby_locations = None
+    client = get_openaq_client()
 
     while current_radius <= max_radius:
-        nearby_locations = openaq_client.locations.list(
+        nearby_locations = client.locations.list(
             coordinates=f"{lat},{lng}",
             radius=current_radius,
             limit=1
@@ -302,7 +314,7 @@ def query_location_endpoint(
             }
 
     # Step 3: Fetch latest measurements (use the shared client)
-    latest = openaq_client.locations.latest(locations_id=location_id)
+    latest = client.locations.latest(locations_id=location_id)
 
     # Match measurements with sensor metadata
     latest_measurements = {}
