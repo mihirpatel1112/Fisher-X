@@ -5,8 +5,7 @@
       "src": "api/index.py",
       "use": "@vercel/python",
       "config": {
-        "maxLambdaSize": "50mb",
-        "pythonRequirements": "requirements-prod.txt"
+        "maxLambdaSize": "50mb"
       }
     }
   ],

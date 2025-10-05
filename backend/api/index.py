@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 import requests
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-# from weatherDataAgg import NLDASWeatherManager
+from weatherDataAgg import NLDASWeatherManager
 from .MeteoStat_Analysis import MeteostatAPI
 from pydantic import BaseModel, Field
 from pydantic import BaseModel, Field
@@ -41,7 +41,7 @@ def get_openaq_client() -> OpenAQ:
 async def startup_event():
     global openaq_client, weather_manager
     openaq_client = OpenAQ(api_key=os.getenv("OPENAQ_API_KEY"))
-    # weather_manager = NLDASWeatherManager(cache_dir=os.environ.get("WEATHER_CACHE_DIR", "/tmp/weather_cache"))
+    weather_manager = NLDASWeatherManager(cache_dir=os.environ.get("WEATHER_CACHE_DIR", "/tmp/weather_cache"))
 
 @app.on_event("shutdown")
 async def shutdown_event():
