@@ -1,5 +1,7 @@
 import os, json, pickle, numpy as np, pandas as pd
 from sklearn.preprocessing import MinMaxScaler
+import os, json, pickle, numpy as np, pandas as pd
+from typing import Dict
 
 #log transformation features
 LOG_CFG = {
@@ -33,7 +35,13 @@ def _log_if_needed(param, x):
     cfg = LOG_CFG.get(param.lower(), {"apply": False, "shift": 0.0})
     return float(np.log(float(x) + cfg["shift"])) if cfg["apply"] else float(x)
 
-def load_artifacts(model_dir="models/trained_models"):
+def load_artifacts(model_dir=None):
+    base_dir = os.path.dirname(__file__)
+    if model_dir is None:
+        model_dir = os.path.join(base_dir, "trained_models")
+    elif not os.path.isabs(model_dir):
+        model_dir = os.path.join(base_dir, model_dir)
+
     meta = json.loads(open(os.path.join(model_dir, "metadata.json")).read())
     models = {p: pickle.load(open(os.path.join(model_dir, f"{p}_model.pkl"), "rb"))
               for p in meta.keys()}
@@ -124,18 +132,16 @@ def calculate_overall_aqi(pollutant_values):
         return None
 #===============================================================
 
-def start_prediction(raw):
+def start_prediction(raw: Dict[str, float]):
     params = ['co', 'no', 'no2', 'nox', 'o3', 'pm10', 'pm25', 'so2']
-    models, meta, scalers = load_artifacts("trained_models")
-    predictions={}
+    models, meta, scalers = load_artifacts()  # use robust default path
+    predictions = {}
     for param in params:
         pred = predict_param(param, raw, models, meta, scalers)
         predictions[param] = pred
     dominant_aqi = calculate_overall_aqi(predictions)
     predictions["aqi"] = dominant_aqi
     return predictions
-
-
 
 # raw = {
 #     # t-1 weather (unscaled)

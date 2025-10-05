@@ -13,6 +13,9 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from weatherDataAgg import NLDASWeatherManager
 from .MeteoStat_Analysis import MeteostatAPI
 from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field
+from typing import Optional
+from models.func import start_prediction 
 
 load_dotenv()
 
@@ -51,8 +54,6 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:8000",
-        "https://*.ngrok-free.app",
-        "https://*.ngrok.io",
         "https://fisher-x-fronty.vercel.app",
     ],
     allow_credentials=True,
@@ -73,12 +74,42 @@ def health():
 # Combined Location + Weather Endpoint
 # =================================================
 
+class RawInput(BaseModel):
+    # t-1 weather (unscaled, original units consistent with training)
+    temp: float
+    dwpt: float
+    rhum: float
+    prcp: float
+    wdir: float
+    wspd: float
+    coco: float
+    # t-1 pollutants (unlogged, original units consistent with training)
+    co: float
+    no: float
+    no2: float
+    nox: float
+    o3: float
+    pm10: float
+    pm25: float
+    so2: float
+
+class CombinedPredictRequest(BaseModel):
+    lat: float
+    lng: float
+    radius: Optional[int] = 5000
+    altitude: Optional[float] = None
+    weather_days: Optional[int] = 7
+    date: Optional[str] = None
+    hours: int = Field(1, ge=1, description="Hours ahead to predict; only 1 is supported for now")
+    raw: RawInput
+
 class CombinedDataResponse(BaseModel):
     success: bool
     air_quality: dict
     weather: dict
     location: dict
     message: Optional[str] = None
+    predictions: Optional[dict] = None  
 
 
 @app.get("/api/query/combined", response_model=CombinedDataResponse)
@@ -88,7 +119,8 @@ async def get_combined_data(
     radius: Optional[int] = Query(5000, description="Initial search radius in meters"),
     altitude: Optional[float] = Query(None, description="Altitude in meters"),
     weather_days: Optional[int] = Query(7, description="Number of days of weather data"),
-    date: Optional[str] = Query(None, description="Target date for weather (YYYY-MM-DD)")
+    date: Optional[str] = Query(None, description="Target date for weather (YYYY-MM-DD)"),
+    hours: Optional[int] = Query(None, description="Hours ahead to predict (currently only 1); omit to skip prediction"),
 ):
     """
     Combined endpoint that fetches both air quality and weather data for a location.
@@ -238,6 +270,73 @@ async def get_combined_data(
         errors.append(f"Weather error: {str(e)}")
         result["weather"] = {"error": str(e)}
 
+        # =================================================
+    # 2.5 Predict next-hour pollutants from fetched data
+    # =================================================
+    try:
+        # Only run prediction if hours parameter is explicitly provided
+        if hours is not None and hours == 1 and result.get("air_quality"):
+            # Weather (hourly) in the exact keys the model expects
+            weather_hourly = _fetch_hourly_weather(lat, lng)
+
+            # Latest pollutants from OpenAQ
+            latest_meas = result.get("air_quality", {}).get("latest_measurements", {}) or {}
+            def _m(key):
+                v = latest_meas.get(key)
+                return v.get("value") if isinstance(v, dict) else v
+
+            pollutants = {
+                "co":  _m("co"),
+                "no":  _m("no"),
+                "no2": _m("no2"),
+                "nox": _m("nox"),
+                "o3":  _m("o3"),
+                "pm10": _m("pm10"),
+                "pm25": _m("pm25"),
+                "so2": _m("so2"),
+            }
+
+            # Safe numeric defaults if any are missing
+            def _safe(x, default=0.0):
+                try:
+                    return float(x)
+                except (TypeError, ValueError):
+                    return float(default)
+
+            # Assemble raw input for start_prediction
+            raw = {
+                # t-1 weather
+                "temp": _safe(weather_hourly.get("temp")),
+                "dwpt": _safe(weather_hourly.get("dwpt")),
+                "rhum": _safe(weather_hourly.get("rhum")),
+                "prcp": _safe(weather_hourly.get("prcp")),
+                "wdir": _safe(weather_hourly.get("wdir")),
+                "wspd": _safe(weather_hourly.get("wspd")),
+                "coco": _safe(weather_hourly.get("coco")),
+                # t-1 pollutants
+                "co":   _safe(pollutants.get("co")),
+                "no":   _safe(pollutants.get("no")),
+                "no2":  _safe(pollutants.get("no2")),
+                "nox":  _safe(pollutants.get("nox")),
+                "o3":   _safe(pollutants.get("o3")),
+                "pm10": _safe(pollutants.get("pm10"), default=1e-6),  # avoid log(0)
+                "pm25": _safe(pollutants.get("pm25")),
+                "so2":  _safe(pollutants.get("so2")),
+            }
+
+            # Run model
+            preds = start_prediction(raw)
+            result["predictions"] = {
+                "horizon_hours": 1,
+                "values": preds
+            }
+        elif hours is not None and hours != 1:
+            result["predictions"] = {"error": "Only 1-hour ahead prediction is supported."}
+        # If hours is None, don't add predictions key at all (or leave it as None from response model)
+    except Exception as e:
+        # Non-fatal: still return combined data
+        result["predictions"] = {"error": str(e)}
+
     # =================================================
     # 3. Final Result
     # =================================================
@@ -347,6 +446,26 @@ def query_location_endpoint(
         "search_radius_used_km": current_radius / 1000  # Include the radius that found results
     }
 
+@app.post("/api/query/combined", response_model=CombinedDataResponse)
+async def post_combined_with_prediction(req: CombinedPredictRequest):
+    # Reuse existing combined logic to get air quality + weather
+    base = await get_combined_data(
+        lat=req.lat,
+        lng=req.lng,
+        radius=req.radius,
+        altitude=req.altitude,
+        weather_days=req.weather_days,
+        date=req.date
+    )
+
+    if req.hours == 1:
+        preds = start_prediction(req.raw.dict())
+        base["predictions"] = preds
+    else:
+        base["predictions"] = {"error": "Only 1-hour ahead supported currently"}
+
+    return base
+
 
 # =================================================
 # Meteo Getter
@@ -443,3 +562,30 @@ async def get_latest_weather_range(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+def _fetch_hourly_weather(lat: float, lng: float) -> dict:
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": lat,
+        "longitude": lng,
+        "hourly": "temperature_2m,dewpoint_2m,relative_humidity_2m,precipitation,wind_direction_10m,wind_speed_10m,weather_code",
+        "past_hours": 48,
+        "forecast_hours": 0,
+        "timezone": "UTC",
+    }
+    r = requests.get(url, params=params, timeout=10)
+    r.raise_for_status()
+    h = r.json().get("hourly", {}) or {}
+    times = h.get("time") or []
+    if not times:
+        return {}
+    i = len(times) - 1  # last available hour
+    return {
+        "temp": float(h["temperature_2m"][i]),
+        "dwpt": float(h["dewpoint_2m"][i]),
+        "rhum": float(h["relative_humidity_2m"][i]),
+        "prcp": float(h["precipitation"][i]),
+        "wdir": float(h["wind_direction_10m"][i]),
+        "wspd": float(h["wind_speed_10m"][i]),
+        "coco": float(h["weather_code"][i]),
+    }
