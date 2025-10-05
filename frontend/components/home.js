@@ -67,14 +67,14 @@ export default function home() {
             </h1>
 
             <p className="mx-auto mt-6 max-w-3xl text-center text-lg text-gray-300 leading-relaxed">
-              Fisher-X is an innovative web app developed for NASA’s 2025 Space
+              Fisher-X is an innovative web app developed for NASA&apos;s 2025 Space
               Apps Challenge that forecasts air quality across North America by
               integrating OpenAQ ground-based data and Metostat weather
               information. The platform provides users with real-time
               air-quality insights, alerts, and visualizations to support
               healthier communities and informed decision-making. (TEMPO
               satellite integration is part of our future scope, pending access
-              to NASA’s TEMPO data platform.
+              to NASA&apos;s TEMPO data platform.
             </p>
 
             <div className="flex justify-center">
@@ -254,7 +254,7 @@ export default function home() {
                     limits, contributing to millions of premature deaths each
                     year. The causes of air pollution range from traffic and
                     industrial emissions to wildfires and dust storms. To
-                    improve prediction and awareness, NASA’s TEMPO satellite
+                    improve prediction and awareness, NASA&apos;s TEMPO satellite
                     provides high-resolution measurements of atmospheric
                     pollutants over North America. By combining this data with
                     ground-based sensors (OpenAQ) and meteorological inputs
@@ -331,7 +331,7 @@ export default function home() {
                     Project Goals
                   </h3>
                   <p className="text-gray-700 leading-relaxed">
-                    Fisher-X's goal is to create a scalable cloud-based platform
+                    Fisher-X&apos;s goal is to create a scalable cloud-based platform
                     for near-real-time air-quality forecasting in North America.
                     Our model currently integrates OpenAQ and Metostat datasets
                     to predict local air-quality index (AQI) values.
