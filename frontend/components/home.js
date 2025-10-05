@@ -5,7 +5,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard' },
 ]
 
-export default function Example() {
+export default function home() {
   return (
     <div className="bg-white">
       <main>
