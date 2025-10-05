@@ -3,7 +3,14 @@ from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime, timedelta
 from meteostat import Point, Daily
 import pandas as pd
+import os
+from meteostat.interface.base import Base
 
+# Prevent writes in serverless: disable cache by default
+Base.max_age = int(os.environ.get("METEOSTAT_MAX_AGE", "0"))  # 0 = no cache, no writes
+
+# If you ever enable cache (max_age > 0), ensure cache is in /tmp (writable on Vercel)
+Base.cache_dir = os.environ.get("METEOSTAT_CACHE_DIR", "/tmp/meteostat-cache")
 
 class MeteostatAPI:
     """

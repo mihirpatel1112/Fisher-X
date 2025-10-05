@@ -1,5 +1,3 @@
-import os
-os.environ['METEOSTAT_CACHE_DIR'] = '/tmp/meteostat'
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from openaq import OpenAQ
@@ -22,21 +20,21 @@ load_dotenv()
 app = FastAPI(title="SpaceApps AQ Backend")
 
 # Initialize the client
-# openaq_client = None
-# weather_manager = None
+openaq_client = None
+weather_manager = None
 
 
-# @app.on_event("startup")
-# async def startup_event():
-#     global openaq_client, weather_manager
-#     openaq_client = OpenAQ(api_key=os.getenv("OPENAQ_API_KEY"))
-#     weather_manager = NLDASWeatherManager(cache_dir="./weather_cache")
+@app.on_event("startup")
+async def startup_event():
+    global openaq_client, weather_manager
+    openaq_client = OpenAQ(api_key=os.getenv("OPENAQ_API_KEY"))
+    weather_manager = NLDASWeatherManager(cache_dir=os.environ.get("WEATHER_CACHE_DIR", "/tmp/weather_cache"))
 
-# @app.on_event("shutdown")
-# async def shutdown_event():
-#     global openaq_client
-#     if openaq_client:
-#         openaq_client.close()
+@app.on_event("shutdown")
+async def shutdown_event():
+    global openaq_client
+    if openaq_client:
+        openaq_client.close()
 
 app.add_middleware(
     CORSMiddleware,
@@ -51,14 +49,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-def get_openaq_client():
-    """Create and return OpenAQ client for this request"""
-    api_key = os.getenv("OPENAQ_API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=500, detail="OPENAQ_API_KEY not configured")
-    return OpenAQ(api_key=api_key)
-
 
 @app.get("/")
 def root():
@@ -92,7 +82,7 @@ async def get_combined_data(
 ):
     """
     Combined endpoint that fetches both air quality and weather data for a location.
-    
+
     Returns:
     - Air quality data from nearest monitoring station
     - Weather data (latest available or date range)
@@ -105,33 +95,30 @@ async def get_combined_data(
         "location": {},
         "message": None
     }
-    
+
     errors = []
-    openaq_client = None  # Initialize client variable
-    
+
     # =================================================
     # 1. Fetch Air Quality Data
     # =================================================
     try:
-        openaq_client = get_openaq_client()  # Get client instance
-        
         max_radius = 100000  # Maximum 100km
         radius_increment = 10000  # Increase by 10km each time
         current_radius = radius
         nearby_locations = None
-        
+
         while current_radius <= max_radius:
             nearby_locations = openaq_client.locations.list(
                 coordinates=f"{lat},{lng}",
                 radius=current_radius,
                 limit=1
             )
-            
+
             if nearby_locations and len(nearby_locations.results) > 0:
                 break
-            
+
             current_radius += radius_increment
-        
+
         if not nearby_locations or len(nearby_locations.results) == 0:
             errors.append(f"No air quality stations found within {max_radius/1000}km radius")
             result["air_quality"] = {
@@ -188,7 +175,7 @@ async def get_combined_data(
                 "available_sensors": sensors,
                 "search_radius_used_km": current_radius / 1000
             }
-            
+
             # Update location info
             result["location"] = {
                 "latitude": lat,
@@ -196,31 +183,24 @@ async def get_combined_data(
                 "nearest_station": nearest_location.name,
                 "distance_to_station_km": round(getattr(nearest_location, 'distance', 0) / 1000, 2) if hasattr(nearest_location, 'distance') else None
             }
-    
+
     except Exception as e:
         errors.append(f"Air quality error: {str(e)}")
         result["air_quality"] = {"error": str(e)}
-    finally:
-        # Close the client to prevent resource leaks
-        if openaq_client:
-            try:
-                openaq_client.close()
-            except:
-                pass
-    
+
     # =================================================
     # 2. Fetch Weather Data
     # =================================================
     try:
         weather_api = MeteostatAPI()
-        
+
         if date:
             # Get single day weather data
             try:
                 target_date = datetime.strptime(date, '%Y-%m-%d')
             except ValueError:
                 raise ValueError("Invalid date format. Use YYYY-MM-DD")
-            
+
             weather_result = weather_api.get_latest_single_day(
                 latitude=lat,
                 longitude=lng,
@@ -236,17 +216,17 @@ async def get_combined_data(
                 altitude=altitude,
                 format="dict"
             )
-        
+
         if weather_result.get("success"):
             result["weather"] = weather_result
         else:
             errors.append(weather_result.get("error", "No weather data found"))
             result["weather"] = {"error": weather_result.get("error", "No weather data found")}
-    
+
     except Exception as e:
         errors.append(f"Weather error: {str(e)}")
         result["weather"] = {"error": str(e)}
-    
+
     # =================================================
     # 3. Final Result
     # =================================================
@@ -255,19 +235,20 @@ async def get_combined_data(
             "latitude": lat,
             "longitude": lng
         }
-    
+
     # Determine overall success
     result["success"] = len(errors) == 0
-    
+
     if errors:
         result["message"] = "; ".join(errors)
-    
+
     return result
 
 
 # =================================================
 # Original Individual Endpoints (kept for backwards compatibility)
 # =================================================
+
 @app.get("/api/query/location")
 def query_location_endpoint(
     lat: float,
@@ -275,94 +256,84 @@ def query_location_endpoint(
     radius: Optional[int] = 5000,
     limit: Optional[int] = 100
 ):
-    openaq_client = None
-    try:
-        openaq_client = get_openaq_client()
-        
-        # Step 1: Find nearest location with increasing radius if needed
-        max_radius = 100000  # Maximum 100km
-        radius_increment = 10000  # Increase by 10km each time
-        current_radius = radius
-        nearby_locations = None
-        
-        while current_radius <= max_radius:
-            nearby_locations = openaq_client.locations.list(
-                coordinates=f"{lat},{lng}",
-                radius=current_radius,
-                limit=1
-            )
-            
-            # Check if we found any locations
-            if nearby_locations and len(nearby_locations.results) > 0:
-                break
-            
-            # No results found, increase radius
-            current_radius += radius_increment
-        
-        # If still no locations found after reaching max radius
-        if not nearby_locations or len(nearby_locations.results) == 0:
-            return {
-                "error": f"No locations found within {max_radius/1000}km radius",
-                "searched_radius_km": max_radius / 1000
+    # Step 1: Find nearest location with increasing radius if needed
+    max_radius = 100000  # Maximum 100km
+    radius_increment = 10000  # Increase by 10km each time
+    current_radius = radius
+    nearby_locations = None
+
+    while current_radius <= max_radius:
+        nearby_locations = openaq_client.locations.list(
+            coordinates=f"{lat},{lng}",
+            radius=current_radius,
+            limit=1
+        )
+
+        # Check if we found any locations
+        if nearby_locations and len(nearby_locations.results) > 0:
+            break
+
+        # No results found, increase radius
+        current_radius += radius_increment
+
+    # If still no locations found after reaching max radius
+    if not nearby_locations or len(nearby_locations.results) == 0:
+        return {
+            "error": f"No locations found within {max_radius/1000}km radius",
+            "searched_radius_km": max_radius / 1000
+        }
+
+    # Step 2: Get the first location's ID and sensors info
+    nearest_location = nearby_locations.results[0]
+    location_id = nearest_location.id
+
+    # Get sensor information from the location
+    sensors = {}
+    if hasattr(nearest_location, 'sensors') and nearest_location.sensors:
+        for sensor in nearest_location.sensors:
+            param_id = sensor.id
+            param_name = sensor.parameter.name if hasattr(sensor, 'parameter') else 'unknown'
+            param_display = sensor.parameter.display_name if hasattr(sensor, 'parameter') else param_name
+            param_unit = sensor.parameter.units if hasattr(sensor, 'parameter') else ''
+            sensors[param_id] = {
+                'name': param_name,
+                'display_name': param_display,
+                'unit': param_unit
             }
 
-        # Step 2: Get the first location's ID and sensors info
-        nearest_location = nearby_locations.results[0]
-        location_id = nearest_location.id
+    # Step 3: Fetch latest measurements (use the shared client)
+    latest = openaq_client.locations.latest(locations_id=location_id)
 
-        # Get sensor information from the location
-        sensors = {}
-        if hasattr(nearest_location, 'sensors') and nearest_location.sensors:
-            for sensor in nearest_location.sensors:
-                param_id = sensor.id
-                param_name = sensor.parameter.name if hasattr(sensor, 'parameter') else 'unknown'
-                param_display = sensor.parameter.display_name if hasattr(sensor, 'parameter') else param_name
-                param_unit = sensor.parameter.units if hasattr(sensor, 'parameter') else ''
-                sensors[param_id] = {
-                    'name': param_name,
-                    'display_name': param_display,
-                    'unit': param_unit
+    # Match measurements with sensor metadata
+    latest_measurements = {}
+    if latest and hasattr(latest, 'results'):
+        for idx, item in enumerate(latest.results):
+            value = getattr(item, 'value', None)
+            if idx < len(sensors):
+                sensor_id = list(sensors.keys())[idx]
+                sensor_info = sensors[sensor_id]
+                latest_measurements[sensor_info['name']] = {
+                    "value": value,
+                    "unit": sensor_info['unit'],
+                    "display_name": sensor_info['display_name']
+                }
+            else:
+                latest_measurements[f"parameter_{idx}"] = {
+                    "value": value,
+                    "unit": "unknown"
                 }
 
-        # Step 3: Fetch latest measurements (use the shared client)
-        latest = openaq_client.locations.latest(locations_id=location_id)
-
-        # Match measurements with sensor metadata
-        latest_measurements = {}
-        if latest and hasattr(latest, 'results'):
-            for idx, item in enumerate(latest.results):
-                value = getattr(item, 'value', None)
-                if idx < len(sensors):
-                    sensor_id = list(sensors.keys())[idx]
-                    sensor_info = sensors[sensor_id]
-                    latest_measurements[sensor_info['name']] = {
-                        "value": value,
-                        "unit": sensor_info['unit'],
-                        "display_name": sensor_info['display_name']
-                    }
-                else:
-                    latest_measurements[f"parameter_{idx}"] = {
-                        "value": value,
-                        "unit": "unknown"
-                    }
-
-        return {
-            "nearest_location": {
-                "id": location_id,
-                "name": nearest_location.name,
-                "coordinates": nearest_location.coordinates,
-                "distance": getattr(nearest_location, 'distance', None)
-            },
-            "latest_measurements": latest_measurements,
-            "available_sensors": sensors,
-            "search_radius_used_km": current_radius / 1000  # Include the radius that found results
-        }
-    finally:
-        if openaq_client:
-            try:
-                openaq_client.close()
-            except:
-                pass
+    return {
+        "nearest_location": {
+            "id": location_id,
+            "name": nearest_location.name,
+            "coordinates": nearest_location.coordinates,
+            "distance": getattr(nearest_location, 'distance', None)
+        },
+        "latest_measurements": latest_measurements,
+        "available_sensors": sensors,
+        "search_radius_used_km": current_radius / 1000  # Include the radius that found results
+    }
 
 
 # =================================================
@@ -412,19 +383,19 @@ async def get_latest_weather(
                 target_date = datetime.strptime(date, '%Y-%m-%d')
             except ValueError:
                 raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
-        
+
         result = weather_api.get_latest_single_day(
             latitude=latitude,
             longitude=longitude,
             altitude=altitude,
             target_date=target_date
         )
-        
+
         if not result["success"]:
             raise HTTPException(status_code=404, detail=result.get("error", "No data found"))
-        
+
         return result
-    
+
     except HTTPException:
         raise
     except Exception as e:
@@ -450,12 +421,12 @@ async def get_latest_weather_range(
             altitude=altitude,
             format="dict"
         )
-        
+
         if not result.get("success"):
             raise HTTPException(status_code=404, detail=result.get("error", "No data found"))
-        
+
         return result
-    
+
     except HTTPException:
         raise
     except Exception as e:
