@@ -25,7 +25,7 @@ meteostat==1.7.5
 # ML Inference (Required for predictions)
 numpy==2.3.3
 pandas==2.3.3
-scikit-learn==1.5.2
+# scikit-learn==1.5.2
 
 # Utilities
 python-dotenv==1.1.1
