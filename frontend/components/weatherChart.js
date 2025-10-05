@@ -1,14 +1,40 @@
 'use client';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-export default function WeatherChart({ data, title = 'Weather Data', metrics = [] }) {
+export default function WeatherChart({ data, title = 'Weather Data', metrics = [], yAxisLabel = '' }) {
   // Color palette for different weather metrics
   const colors = {
-    temperature: '#ef4444',
-    humidity: '#3b82f6',
-    precipitation: '#06b6d4',
-    windSpeed: '#8b5cf6',
-    pressure: '#ec4899'
+    temperature: '#ef4444',      // red
+    tempMin: '#93c5fd',          // light blue
+    tempMax: '#dc2626',          // dark red
+    humidity: '#3b82f6',         // blue
+    precipitation: '#06b6d4',    // cyan
+    windSpeed: '#8b5cf6',        // purple
+    pressure: '#ec4899',         // pink
+    snow: '#e0f2fe'              // light blue
+  };
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  // Custom tooltip to show formatted values
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+          <p className="font-semibold text-gray-800">{formatDate(label)}</p>
+          {payload.map((entry, index) => (
+            <p key={index} style={{ color: entry.color }}>
+              {entry.name}: {entry.value != null ? entry.value.toFixed(1) : 'N/A'}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -22,15 +48,14 @@ export default function WeatherChart({ data, title = 'Weather Data', metrics = [
             dataKey="timestamp" 
             stroke="#6b7280"
             tick={{ fontSize: 12 }}
+            tickFormatter={formatDate}
           />
           <YAxis 
             stroke="#6b7280"
             tick={{ fontSize: 12 }}
+            label={yAxisLabel ? { value: yAxisLabel, angle: -90, position: 'insideLeft', style: { fontSize: 12 } } : undefined}
           />
-          <Tooltip 
-            contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px' }}
-            labelStyle={{ fontWeight: 'bold' }}
-          />
+          <Tooltip content={<CustomTooltip />} />
           <Legend />
           
           {/* Render a line for each metric */}
@@ -43,11 +68,27 @@ export default function WeatherChart({ data, title = 'Weather Data', metrics = [
               strokeWidth={2}
               dot={{ r: 2 }}
               activeDot={{ r: 4 }}
-              name={metric.charAt(0).toUpperCase() + metric.slice(1)}
+              name={formatMetricName(metric)}
+              connectNulls={true}  // Connect lines even if some data points are null
             />
           ))}
         </LineChart>
       </ResponsiveContainer>
     </div>
   );
+}
+
+// Helper function to format metric names for display
+function formatMetricName(metric) {
+  const names = {
+    temperature: 'Avg Temp',
+    tempMin: 'Min Temp',
+    tempMax: 'Max Temp',
+    humidity: 'Humidity',
+    precipitation: 'Precipitation',
+    windSpeed: 'Wind Speed',
+    pressure: 'Pressure',
+    snow: 'Snow'
+  };
+  return names[metric] || metric.charAt(0).toUpperCase() + metric.slice(1);
 }

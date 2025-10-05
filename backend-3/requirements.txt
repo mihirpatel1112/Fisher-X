@@ -32,7 +32,6 @@ multidict==6.6.4
 multimethod==2.0
 netCDF4==1.7.2
 numpy==2.3.3
-openaq==0.4.0
 packaging==25.0
 pandas==2.3.3
 pillow==11.3.0
