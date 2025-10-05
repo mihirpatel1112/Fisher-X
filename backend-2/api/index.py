@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from openaq import OpenAQ
 from dotenv import load_dotenv
@@ -11,6 +11,9 @@ import requests
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from weatherDataAgg import NLDASWeatherManager
+from .MeteoStat_Analysis import MeteostatAPI
+from pydantic import BaseModel, Field
+from typing import Optional
 
 load_dotenv()
 
@@ -121,3 +124,101 @@ def query_location_endpoint(
         "latest_measurements": latest_measurements,
         "available_sensors": sensors
     }
+
+
+# =================================================
+# Meteo Getter
+# =================================================
+
+# Initialize the API
+weather_api = MeteostatAPI()
+
+
+# Response models
+class LatestDayResponse(BaseModel):
+    success: bool
+    location: dict
+    requested_date: str
+    actual_date: str
+    days_back: int
+    data: dict
+    message: Optional[str] = None
+
+
+class LatestRangeResponse(BaseModel):
+    success: bool
+    data: list
+    total_records: int
+    statistics: Optional[dict] = None
+    data_completeness: Optional[dict] = None
+    date_range: Optional[dict] = None
+    location: Optional[dict] = None
+
+
+@app.get("/api/query/weatherGetter", response_model=LatestDayResponse)
+async def get_latest_weather(
+    latitude: float ,
+    longitude: float,
+    altitude: Optional[float] = Query(None, description="Altitude in meters"),
+    date: Optional[str] = Query(None, description="Target date (YYYY-MM-DD)")
+):
+    """
+    Get the most recent single day of weather data.
+    Automatically searches backwards until data is found.
+    """
+    try:
+        target_date = None
+        if date:
+            try:
+                target_date = datetime.strptime(date, '%Y-%m-%d')
+            except ValueError:
+                raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+        
+        result = weather_api.get_latest_single_day(
+            latitude=latitude,
+            longitude=longitude,
+            altitude=altitude,
+            target_date=target_date
+        )
+        
+        if not result["success"]:
+            raise HTTPException(status_code=404, detail=result.get("error", "No data found"))
+        
+        return result
+    
+    except BaseException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+
+
+@app.get("/api/weather/latest/range", response_model=LatestRangeResponse)
+async def get_latest_weather_range(
+    latitude: float,
+
+    longitude: float,
+    days: Optional[int],
+    altitude: Optional[float]
+):
+    """
+    Get the most recent range of weather data.
+    Returns the specified number of days leading up to the most recent available date.
+    """
+    try:
+        result = weather_api.get_latest_data(
+            latitude=latitude,
+            longitude=longitude,
+            days=days,
+            altitude=altitude,
+            format="dict"
+        )
+        
+        if not result.get("success"):
+            raise HTTPException(status_code=404, detail=result.get("error", "No data found"))
+        
+        return result
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
