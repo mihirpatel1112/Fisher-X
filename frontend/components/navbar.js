@@ -20,7 +20,7 @@ export default function Navbar() {
                   Fisher-X
                 </span>
                 <span className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#FC3D21', color: 'white' }}>
-                  NASA Space Apps 2025
+                  2025 NASA Space Apps Challenge 
                 </span>
               </div>
             </Link>
