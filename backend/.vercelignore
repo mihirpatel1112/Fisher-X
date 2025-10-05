@@ -1,0 +1,29 @@
+# Virtual environments (NEVER deploy these)
+venv/
+.venv/
+venv*
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+
+# Cache directories
+weather_cache/
+*.cache
+
+# Training data (not needed in production)
+models/data/
+*.csv
+
+# Jupyter notebooks (not needed)
+*.ipynb
+models/train.ipynb
+
+# Development files
+*.log
+.env
+.DS_Store
+
+# Large data files
+*.nc
+*.netcdf
