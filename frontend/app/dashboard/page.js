@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import DashboardGrid from "@/components/dashboardgrid";
+import DashboardGrid from "@/components/dashgrid";
 import AQSummary from "@/components/aqSummary";
 
 export default function Dashboard() {
