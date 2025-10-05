@@ -2,73 +2,82 @@
 import { useState, useEffect } from "react";
 import DashboardGrid from "@/components/dashgrid";
 import AQSummary from "@/components/aqSummary";
+import CitySearch from "@/components/citySearch";
 
 export default function Dashboard() {
   const [airQualityData, setAirQualityData] = useState(null);
   const [weatherData, setWeatherData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [currentLocation, setCurrentLocation] = useState({
+    lat: 34.0522,
+    lng: -118.2445,
+  });
 
-  // Default coordinates for Del Norte
-  const DEFAULT_LAT = 34.0522;
-  const DEFAULT_LNG = -118.2445;
+  // Fetch data from your backend API
+  async function fetchData(lat, lng) {
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+      const aqResponse = await fetch(
+        `${backendUrl}/api/query/location?lat=${lat}&lng=${lng}`
+      );
+
+      // Optional: weather may not exist yet; fetch it but don't fail the whole page if it 404s
+      let wData = null;
+      try {
+        const weatherResponse = await fetch(`${backendUrl}/api/weather`);
+        if (weatherResponse.ok) {
+          wData = await weatherResponse.json();
+        }
+      } catch (_) {}
+
+      if (!aqResponse.ok) {
+        throw new Error("Failed to fetch air quality data");
+      }
+
+      const aqData = await aqResponse.json();
+
+      const now = new Date().toISOString();
+      const transformedAQ = {
+        pm25: aqData?.latest_measurements?.pm25
+          ? [{ timestamp: now, value: aqData.latest_measurements.pm25.value }]
+          : [],
+        no2: aqData?.latest_measurements?.no2
+          ? [{ timestamp: now, value: aqData.latest_measurements.no2.value }]
+          : [],
+        latest: aqData?.latest_measurements || {},
+        meta: {
+          nearest_location: aqData?.nearest_location,
+          available_sensors: aqData?.available_sensors,
+        },
+      };
+
+      setAirQualityData(transformedAQ);
+      setWeatherData(wData);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      // Set error state to show error message to user
+      setAirQualityData(null);
+      setWeatherData(null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const handleLocationSelect = (location) => {
+    setLoading(true);
+    setCurrentLocation({
+      lat: location.lat,
+      lng: location.lng
+    });
+  };
 
   useEffect(() => {
-    // Fetch data from your backend API
-    async function fetchData() {
-      try {
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-        const aqResponse = await fetch(
-          `${backendUrl}/api/query/location?lat=${DEFAULT_LAT}&lng=${DEFAULT_LNG}`
-        );
-
-        // Optional: weather may not exist yet; fetch it but don't fail the whole page if it 404s
-        let wData = null;
-        try {
-          const weatherResponse = await fetch(`${backendUrl}/api/weather`);
-          if (weatherResponse.ok) {
-            wData = await weatherResponse.json();
-          }
-        } catch (_) {}
-
-        if (!aqResponse.ok) {
-          throw new Error("Failed to fetch air quality data");
-        }
-
-        const aqData = await aqResponse.json();
-
-        const now = new Date().toISOString();
-        const transformedAQ = {
-          pm25: aqData?.latest_measurements?.pm25
-            ? [{ timestamp: now, value: aqData.latest_measurements.pm25.value }]
-            : [],
-          no2: aqData?.latest_measurements?.no2
-            ? [{ timestamp: now, value: aqData.latest_measurements.no2.value }]
-            : [],
-          latest: aqData?.latest_measurements || {},
-          meta: {
-            nearest_location: aqData?.nearest_location,
-            available_sensors: aqData?.available_sensors,
-          },
-        };
-
-        setAirQualityData(transformedAQ);
-        setWeatherData(wData);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        // Set error state to show error message to user
-        setAirQualityData(null);
-        setWeatherData(null);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
+    fetchData(currentLocation.lat, currentLocation.lng);
 
     // Refresh data every 5 minutes
-    const interval = setInterval(fetchData, 5 * 60 * 1000);
+    const interval = setInterval(() => fetchData(currentLocation.lat, currentLocation.lng), 5 * 60 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [currentLocation]);
 
   if (loading) {
     return (
@@ -90,6 +99,10 @@ export default function Dashboard() {
           </p>
         </div>
 
+        <CitySearch 
+          onLocationSelect={handleLocationSelect}
+          currentLocation={currentLocation}
+        />
         <AQSummary
           latest={airQualityData?.latest}
           sensors={airQualityData?.meta?.available_sensors}

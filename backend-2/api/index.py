@@ -61,15 +61,32 @@ def query_location_endpoint(
     radius: Optional[int] = 5000,
     limit: Optional[int] = 100
 ):
-    # Step 1: Find nearest location
-    nearby_locations = openaq_client.locations.list(
-        coordinates=f"{lat},{lng}",
-        radius=radius,
-        limit=1
-    )
-
+    # Step 1: Find nearest location with increasing radius if needed
+    max_radius = 100000  # Maximum 100km
+    radius_increment = 10000  # Increase by 10km each time
+    current_radius = radius
+    nearby_locations = None
+    
+    while current_radius <= max_radius:
+        nearby_locations = openaq_client.locations.list(
+            coordinates=f"{lat},{lng}",
+            radius=current_radius,
+            limit=1
+        )
+        
+        # Check if we found any locations
+        if nearby_locations and len(nearby_locations.results) > 0:
+            break
+        
+        # No results found, increase radius
+        current_radius += radius_increment
+    
+    # If still no locations found after reaching max radius
     if not nearby_locations or len(nearby_locations.results) == 0:
-        return {"error": "No locations found within the specified radius"}
+        return {
+            "error": f"No locations found within {max_radius/1000}km radius",
+            "searched_radius_km": max_radius / 1000
+        }
 
     # Step 2: Get the first location's ID and sensors info
     nearest_location = nearby_locations.results[0]
@@ -119,5 +136,6 @@ def query_location_endpoint(
             "distance": getattr(nearest_location, 'distance', None)
         },
         "latest_measurements": latest_measurements,
-        "available_sensors": sensors
+        "available_sensors": sensors,
+        "search_radius_used_km": current_radius / 1000  # Include the radius that found results
     }
